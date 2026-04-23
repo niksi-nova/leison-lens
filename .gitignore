@@ -1,0 +1,20 @@
+# Data - never commit these
+data/
+outputs/preprocessed/
+outputs/*.png
+
+# Model checkpoints - too large
+outputs/checkpoints/
+*.pth
+*.pt
+*.npy
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Kaggle credentials - NEVER commit this
+kaggle.json
+.kaggle/
