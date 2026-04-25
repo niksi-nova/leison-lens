@@ -5,7 +5,7 @@ Multi-task DR grading + lesion localization with explainability validation.
 ## Setup
 
 ### 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/lesionlens.git
+git clone https://github.com/niksi-nova/lesionlens.git
 cd lesionlens
 
 ### 2. Create virtual environment
@@ -28,3 +28,6 @@ python src/preprocess.py
 
 ### 5. Verify
 python src/dataset.py
+
+
+Clone the repo: github.com/niksi-nova/lesionlens — follow the README to set up. Download APTOS yourself using your own Kaggle account (instructions in README). Run preprocess.py once to generate the processed images locally.

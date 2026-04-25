@@ -252,6 +252,11 @@ def process_and_save_split(df: pd.DataFrame, split_name: str) -> pd.DataFrame:
     for _, row in tqdm(df.iterrows(), total=len(df), desc=split_name):
         img_id = row['id_code']
         src_path = os.path.join(TRAIN_IMG_DIR, f"{img_id}.png")
+
+        if not os.path.exists(src_path):
+            failed.append(img_id)
+            processed_paths.append(None)
+            continue
         dst_path = os.path.join(out_dir, f"{img_id}.png")
         
         # Skip if already processed (lets you resume if interrupted)
@@ -266,6 +271,7 @@ def process_and_save_split(df: pd.DataFrame, split_name: str) -> pd.DataFrame:
             cv2.imwrite(dst_path, processed)
             processed_paths.append(dst_path)
         else:
+            print(f"FAILED: {src_path}")   # 👈 ADD THIS
             failed.append(img_id)
             processed_paths.append(None)
     

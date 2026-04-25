@@ -1,218 +1,212 @@
-# src/dataset.py
+# dataset.py
+# ─────────────────────────────────────────────────────────────────────────────
+# PyTorch Dataset class for APTOS 2019.
+#
+# What this file does:
+#   1. Reads the CSV (image_id, diagnosis columns)
+#   2. Loads preprocessed images from output/ directory
+#   3. Applies albumentations augmentations (training only)
+#   4. Returns (image_tensor, grade_label, lesion_label) per sample
+#
+# Lesion labels: Since APTOS doesn't have pixel-level annotations,
+# we create PROXY lesion labels from the grade:
+#   Grade 0 → [0,0,0,0]  (no lesions)
+#   Grade 1 → [1,0,0,0]  (MA only)
+#   Grade 2 → [1,1,0,0]  (MA + HE)
+#   Grade 3 → [1,1,1,0]  (MA + HE + EX)
+#   Grade 4 → [1,1,1,1]  (all lesions)
+# These are used to pre-train the lesion head — IDRiD provides real masks later.
+# ─────────────────────────────────────────────────────────────────────────────
 
 import os
 import cv2
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data import Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-import sys
-sys.path.append(os.path.expanduser("~/el4"))
-from src.config import *
+from config import IMG_SIZE, OUTPUT_DIR, NUM_LESION_CLASSES
 
 
-# ────────────────────────────────────────────────────────────────
-# Augmentation Transforms
-# ────────────────────────────────────────────────────────────────
-# WHY AUGMENTATION: Our training set is 2929 images. That's small
-# for a deep learning model. Augmentation artificially expands
-# diversity by applying random transforms — flips, rotations, etc.
-# — while preserving the disease label. A flipped DR image is still
-# a DR image.
-#
-# We use albumentations (faster than torchvision transforms for
-# image augmentation, especially with OpenCV backend).
-#
-# Training gets heavy augmentation. Val/Test get only normalization.
-# ────────────────────────────────────────────────────────────────
+# Proxy lesion label mapping from DR grade
+# Each position = [Microaneurysms, Hemorrhages, Exudates, Soft Exudates]
+GRADE_TO_LESION = {
+    0: [0, 0, 0, 0],
+    1: [1, 0, 0, 0],
+    2: [1, 1, 0, 0],
+    3: [1, 1, 1, 0],
+    4: [1, 1, 1, 1],
+}
 
-def get_transforms(split: str) -> A.Compose:
+
+def get_transforms(mode: str) -> A.Compose:
     """
-    Return albumentations transform pipeline for a given split.
-    
-    Args:
-        split: 'train', 'val', or 'test'
+    Returns albumentations augmentation pipeline.
+
+    Training augmentations are aggressive because retinal images have
+    natural rotational and flip symmetry — the retina looks the same
+    from any angle. This prevents overfitting significantly.
+
+    Validation/test: only normalize and convert to tensor — no randomness.
     """
-    
-    # ImageNet mean and std — used because our backbone was pretrained on ImageNet
-    # All ImageNet-pretrained models expect inputs normalized this way
-    mean = [0.485, 0.456, 0.406]
-    std  = [0.229, 0.224, 0.225]
-    
-    if split == 'train':
+    if mode == "train":
         return A.Compose([
-            # Random horizontal flip — 50% chance
-            A.HorizontalFlip(p=0.5),
-            
-            # Random vertical flip — fundus images are symmetric
-            A.VerticalFlip(p=0.5),
-            
-            # Random rotation up to 360 degrees — retina has no orientation
-            A.Rotate(limit=360, p=0.8),
-            
-            # Slight random brightness/contrast shift
-            A.RandomBrightnessContrast(
-                brightness_limit=0.2,
-                contrast_limit=0.2,
+            A.HorizontalFlip(p=0.5),           # retina is symmetric
+            A.VerticalFlip(p=0.5),             # valid augmentation for fundus
+            A.RandomRotate90(p=0.5),
+            A.ShiftScaleRotate(
+                shift_limit=0.05,
+                scale_limit=0.1,
+                rotate_limit=30,
                 p=0.5
             ),
-            
-            # Random zoom in/out
-            A.RandomScale(scale_limit=0.1, p=0.3),
-            
-            # Ensure output is still IMG_SIZE after zoom
-            A.Resize(IMG_SIZE, IMG_SIZE),
-            
-            # Normalize to ImageNet stats, then convert to PyTorch tensor
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2()
+            # Colour jitter — simulates different camera/lighting conditions
+            A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, p=0.4),
+            # Coarse dropout = randomly black out patches (forces model to
+            # not rely on single regions, improves generalisation)
+            A.CoarseDropout(
+                max_holes=8, max_height=32, max_width=32,
+                min_holes=1, fill_value=0, p=0.3
+            ),
+            # ImageNet normalisation — required because we use ImageNet pretrained weights
+            A.Normalize(mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225]),
+            ToTensorV2(),   # converts HxWxC numpy → CxHxW torch tensor
         ])
-    
-    else:   # val or test — no random transforms
+    else:
+        # Val/test: no augmentation, just normalise
         return A.Compose([
-            A.Resize(IMG_SIZE, IMG_SIZE),
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2()
+            A.Normalize(mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225]),
+            ToTensorV2(),
         ])
 
 
-# ────────────────────────────────────────────────────────────────
-# Dataset Class
-# ────────────────────────────────────────────────────────────────
 class APTOSDataset(Dataset):
     """
-    PyTorch Dataset for the APTOS fundus image dataset.
-    
-    Loads preprocessed images and applies transforms.
-    Returns (image_tensor, label) pairs.
+    PyTorch Dataset for APTOS 2019 Blindness Detection.
+
+    Args:
+        dataframe : pandas DataFrame with columns ['image_id', 'diagnosis']
+        mode      : 'train', 'val', or 'test'
+        img_dir   : directory containing preprocessed .png images
     """
+
+    def __init__(self, dataframe: pd.DataFrame, mode: str = "train",
+             img_dir: str = None):
     
-    def __init__(self, csv_path: str, split: str = 'train'):
-        """
-        Args:
-            csv_path: Path to the split's label CSV 
-                      (e.g. outputs/preprocessed/train_labels.csv)
-            split:    'train', 'val', or 'test'
-        """
-        self.df        = pd.read_csv(csv_path)
-        self.split     = split
-        self.transform = get_transforms(split)
-        
-        # Drop any rows where preprocessing failed (processed_path is None)
-        self.df = self.df.dropna(subset=['processed_path'])
-        self.df = self.df.reset_index(drop=True)
-        
-        print(f"Loaded {split} dataset: {len(self.df)} images")
-    
+        self.df = dataframe.reset_index(drop=True)
+        self.mode = mode
+
+        # ✅ DEFINE img_dir BEFORE USING IT
+        self.img_dir = img_dir or os.path.join(OUTPUT_DIR, "aptos", mode)
+
+        self.transform = get_transforms(mode)
+
+        # ✅ FILTER VALID IMAGES (same logic, just in correct order)
+        valid_rows = []
+        for _, row in self.df.iterrows():
+            img_id = row["id_code"] if "id_code" in row else row["image_id"]
+            img_path = os.path.join(self.img_dir, f"{img_id}.png")
+            if os.path.exists(img_path):
+                valid_rows.append(row)
+
+        self.df = pd.DataFrame(valid_rows).reset_index(drop=True)
+        print(f"[dataset] Filtered valid samples: {len(self.df)}")
+
+        print(f"[dataset] {mode.upper()} set: {len(self.df)} samples | "
+            f"img_dir={self.img_dir}")
+
     def __len__(self):
         return len(self.df)
-    
+
     def __getitem__(self, idx: int):
-        row   = self.df.iloc[idx]
-        label = int(row['diagnosis'])
-        
-        # Load preprocessed image (BGR from OpenCV)
-        img = cv2.imread(row['processed_path'])
-        
-        # Convert BGR → RGB (albumentations and PyTorch expect RGB)
+        row      = self.df.iloc[idx]
+        img_id = row["id_code"] if "id_code" in row else row["image_id"]
+        grade    = int(row["diagnosis"])
+
+        # ── Load preprocessed image ───────────────────────────────────────────
+        img_path = os.path.join(self.img_dir, f"{img_id}.png")
+        img      = cv2.imread(img_path, cv2.IMREAD_COLOR)
+
+        if img is None:
+            raise FileNotFoundError(f"Image not found: {img_path}")
+
+        # OpenCV loads as BGR — convert to RGB for albumentations/PyTorch
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        # Apply transforms — albumentations expects numpy HWC uint8
-        transformed = self.transform(image=img)
-        img_tensor  = transformed['image']    # now a CHW float tensor
-        
-        return img_tensor, torch.tensor(label, dtype=torch.long)
-    
-    def get_labels(self):
-        """Return all labels as a list — needed for WeightedRandomSampler."""
-        return self.df['diagnosis'].tolist()
+
+        # ── Augmentations ─────────────────────────────────────────────────────
+        augmented = self.transform(image=img)
+        img_tensor = augmented["image"]   # shape: [3, 512, 512]
+
+        # ── Labels ────────────────────────────────────────────────────────────
+        grade_label  = torch.tensor(grade, dtype=torch.long)
+        # Proxy lesion label from grade (multi-label binary vector)
+        lesion_label = torch.tensor(
+            GRADE_TO_LESION[grade], dtype=torch.float32
+        )
+
+        return img_tensor, grade_label, lesion_label
 
 
-# ────────────────────────────────────────────────────────────────
-# DataLoader Factory
-# ────────────────────────────────────────────────────────────────
-def get_dataloaders(batch_size: int = 16) -> dict:
+def build_dataloaders(train_df, val_df, test_df, batch_size: int,
+                      img_dir_train: str, img_dir_val: str, img_dir_test: str):
     """
-    Create train/val/test DataLoaders.
-    
-    Train uses WeightedRandomSampler to handle class imbalance.
-    Val and Test use regular sequential sampling.
-    
-    Args:
-        batch_size: Images per batch. 16 is safe for M5 Pro RAM.
-    
+    Builds train/val/test DataLoaders with weighted sampling for class balance.
+
+    Weighted Random Sampling:
+    - Samples rare classes more frequently during training
+    - Does NOT change the dataset — only changes which samples are drawn each epoch
+    - This is better than oversampling (duplicating images) as it uses all data
+
     Returns:
-        Dict with keys 'train', 'val', 'test' → DataLoader objects
+        (train_loader, val_loader, test_loader)
     """
-    splits = {}
-    
-    for split in ['train', 'val', 'test']:
-        csv_path = os.path.join(OUTPUT_DIR, f"{split}_labels.csv")
-        dataset  = APTOSDataset(csv_path, split=split)
-        
-        if split == 'train':
-            # Load precomputed class weights
-            class_weights = np.load(
-                os.path.join(OUTPUT_DIR, "class_weights.npy")
-            )
-            
-            # Assign a weight to each sample based on its class
-            sample_weights = [
-                class_weights[label] for label in dataset.get_labels()
-            ]
-            sample_weights = torch.tensor(sample_weights, dtype=torch.float)
-            
-            # WeightedRandomSampler: over-samples rare classes, 
-            # under-samples common ones, so each batch is balanced
-            sampler = WeightedRandomSampler(
-                weights     = sample_weights,
-                num_samples = len(sample_weights),
-                replacement = True
-            )
-            
-            loader = DataLoader(
-                dataset,
-                batch_size  = batch_size,
-                sampler     = sampler,      # mutually exclusive with shuffle
-                num_workers = 0,            # 0 is safest on Mac M-series
-                pin_memory  = False
-            )
-        
-        else:
-            loader = DataLoader(
-                dataset,
-                batch_size  = batch_size,
-                shuffle     = False,
-                num_workers = 0,
-                pin_memory  = False
-            )
-        
-        splits[split] = loader
-    
-    return splits
+    from torch.utils.data import DataLoader, WeightedRandomSampler
+    from utils import compute_class_weights
+    from config import NUM_CLASSES
 
+    train_set = APTOSDataset(train_df, mode="train", img_dir=img_dir_train)
+    val_set   = APTOSDataset(val_df,   mode="val",   img_dir=img_dir_val)
+    test_set  = APTOSDataset(test_df,  mode="test",  img_dir=img_dir_test)
 
-# ────────────────────────────────────────────────────────────────
-# Quick sanity test — run this file directly to verify
-# ────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    print("Testing DataLoader setup...")
-    
-    loaders = get_dataloaders(batch_size=4)
-    
-    # Grab one batch from train
-    imgs, labels = next(iter(loaders['train']))
-    
-    print(f"\nBatch image tensor shape: {imgs.shape}")   
-    # Expected: torch.Size([4, 3, 512, 512])
-    print(f"Batch labels: {labels}")                    
-    # Expected: tensor of 4 values in [0,4]
-    print(f"Image dtype:  {imgs.dtype}")                
-    # Expected: torch.float32
-    print(f"Image range:  [{imgs.min():.2f}, {imgs.max():.2f}]")
-    # Expected: approximately [-2.1, 2.6] after ImageNet normalization
-    
-    print("\nDataLoader test passed!")
+    # ── Weighted sampler for training only ────────────────────────────────────
+    train_labels    = train_df["diagnosis"].tolist()
+    sample_weights  = compute_class_weights(train_labels, NUM_CLASSES)
+
+    sampler = WeightedRandomSampler(
+        weights     = sample_weights,
+        num_samples = len(sample_weights),
+        replacement = True   # allows over-sampling of rare classes
+    )
+
+    train_loader = DataLoader(
+        train_set,
+        batch_size  = batch_size,
+        sampler     = sampler,      # replaces shuffle=True
+        num_workers = 2,
+        pin_memory = (DEVICE == "cuda")        # speeds up CPU→GPU transfer
+    )
+
+    val_loader = DataLoader(
+        val_set,
+        batch_size  = batch_size,
+        shuffle     = False,
+        num_workers = 2,
+        pin_memory = (DEVICE == "cuda")
+    )
+
+    test_loader = DataLoader(
+        test_set,
+        batch_size  = batch_size,
+        shuffle     = False,
+        num_workers = 2,
+        pin_memory = (DEVICE == "cuda")
+    )
+
+    print(f"[dataloader] train={len(train_loader)} batches | "
+          f"val={len(val_loader)} | test={len(test_loader)}")
+
+    return train_loader, val_loader, test_loader
