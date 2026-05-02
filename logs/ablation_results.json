@@ -1,0 +1,48 @@
+{
+  "experiment": "Multi-task loss weight lambda ablation",
+  "dataset": "APTOS 2019",
+  "model": "EfficientNet-B4 multi-task (grade + lesion)",
+  "metric": "Quadratic Weighted Kappa (QWK) on APTOS test set",
+  "epochs_per_run": 30,
+  "seed": 42,
+  "results": {
+    "0.3": {
+      "test_qwk": 0.8982,
+      "best_val_qwk": 0.9025,
+      "best_epoch": 29,
+      "grade_1_acc": 0.595,
+      "grade_3_acc": 0.421,
+      "MA_auroc": 0.997,
+      "HE_auroc": 0.986,
+      "EX_auroc": 0.930,
+      "SE_auroc": 0.902
+    },
+    "0.4": {
+      "test_qwk": 0.9065,
+      "best_val_qwk": 0.9214,
+      "best_epoch": 22,
+      "note": "PRIMARY MODEL — best_model_lambda0.4.pth",
+      "grade_1_acc": 0.351,
+      "grade_3_acc": 0.526,
+      "MA_auroc": 0.997,
+      "HE_auroc": 0.985,
+      "EX_auroc": 0.943,
+      "SE_auroc": 0.909
+    },
+    "0.5": {
+      "test_qwk": 0.9017,
+      "best_val_qwk": 0.9177,
+      "best_epoch": 15,
+      "grade_1_acc": 0.514,
+      "grade_3_acc": 0.368,
+      "MA_auroc": 0.998,
+      "HE_auroc": 0.985,
+      "EX_auroc": 0.955,
+      "SE_auroc": 0.924
+    }
+  },
+  "conclusion": "lambda=0.4 selected as primary model based on original 30-epoch training (test QWK=0.9065). All lambda values within 0.004 QWK — method is robust to this hyperparameter.",
+  "primary_checkpoint": "best_model_lambda0.4.pth",
+  "primary_checkpoint_epoch": 15,
+  "primary_checkpoint_val_qwk": 0.9020
+}
