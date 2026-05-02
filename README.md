@@ -131,7 +131,7 @@ Additionally: CLAHE on the green channel (DR lesions most visible in green chann
 
 > **Checkpoints** are too large for GitHub (77MB).
 > Download `best_model_lambda0.4.pth` from the Kaggle dataset:
-> `https://www.kaggle.com/datasets/niksinova/el4-checkpoint15-v1`
+> `https://kaggle.com/datasets/ff9e5ab2c38dcb3b603cc3fe6df9504c9e5363828f30cec6c0b0865a9017aaaa`
 > Place it in `checkpoints/best_model_lambda0.4.pth`
 
 ---
