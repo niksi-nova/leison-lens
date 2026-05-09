@@ -13,6 +13,25 @@ outputs/checkpoints/
 venv/
 __pycache__/
 *.pyc
+
+# Environment files
+.env
+.env.local
+
+# Frontend / React
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
 .DS_Store
 
 # Kaggle credentials - NEVER commit this
