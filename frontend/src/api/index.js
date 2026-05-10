@@ -1,116 +1,205 @@
-/*
- * API stubs — the single place where all backend calls live.
- *
- * HOW TO CONNECT TO YOUR FLASK BACKEND:
- * Each function currently returns mock data. When you build the backend,
- * replace the body with a real fetch() call. The vite.config.js proxy
- * already forwards /api/* to localhost:5000, so no CORS issues.
- *
- * Example replacement for login():
- *   export async function login(email, password) {
- *     const res = await fetch('/api/auth/login', {
- *       method: 'POST',
- *       headers: { 'Content-Type': 'application/json' },
- *       body: JSON.stringify({ email, password }),
- *     })
- *     if (!res.ok) throw new Error('Login failed')
- *     return res.json() // { token, user }
- *   }
- */
-
 import { MOCK_PATIENTS, MOCK_SCAN_RESULT } from '../data/mockPatients.js'
 import { MOCK_STATS, MOCK_ACTIVITY, MOCK_CLINICIAN } from '../data/mockDashboard.js'
 
-// Simulates network latency so UI loading states are visible during dev
-const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms))
+const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
-// ─── Auth ────────────────────────────────────────────────────────────────
-
-/**
- * Login — POST /api/auth/login
- * @returns {{ token: string, user: object }}
- */
-export async function login(email, password) {
-  await delay()
-  // Mock: accept any credentials
-  return { token: 'mock-jwt-token', user: MOCK_CLINICIAN }
+const GRADE_DESCRIPTIONS = {
+  0: 'No signs of diabetic retinopathy detected. Routine annual screening recommended.',
+  1: 'Mild non-proliferative DR. Microaneurysms present. Annual monitoring advised.',
+  2: 'Moderate non-proliferative DR. Referral to ophthalmologist within 6 months.',
+  3: 'Severe non-proliferative DR. Urgent referral required.',
+  4: 'Proliferative DR. Neovascularisation present. Immediate referral required.',
 }
 
-/**
- * Register — POST /api/auth/register
- * @returns {{ message: string }}
- */
+function authHeader() {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function handleResponse(res) {
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`
+    try {
+      const body = await res.json()
+      if (body.error) message = body.error
+    } catch (_) {}
+    throw new Error(message)
+  }
+  return res.json()
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+export async function login(email, password) {
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  return handleResponse(res)
+}
+
+export async function signup(name, email, password) {
+  const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password }),
+  })
+  return handleResponse(res)
+}
+
+// Kept for SignUpPage compatibility — maps the form object to signup()
 export async function register(formData) {
-  await delay(600)
+  const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: formData.fullName || formData.name || '',
+      email: formData.email || '',
+      password: formData.password || '',
+    }),
+  })
+  await handleResponse(res)
   return { message: 'Account created successfully' }
 }
 
-// ─── Dashboard ───────────────────────────────────────────────────────────
+// ─── Core predict (new) ──────────────────────────────────────────────────────
 
-/**
- * Dashboard stats — GET /api/dashboard/stats
- * @returns {{ stats: array, activity: array, clinician: object }}
- */
+export async function predictScan(imageFile, patientName = '', patientAge = '') {
+  const form = new FormData()
+  form.append('image', imageFile)
+  if (patientName) form.append('patient_name', patientName)
+  if (patientAge)  form.append('patient_age', String(patientAge))
+
+  const res = await fetch(`${BASE_URL}/api/predict`, {
+    method: 'POST',
+    headers: authHeader(),
+    body: form,
+  })
+  return handleResponse(res)
+}
+
+// ─── Scans (new) ─────────────────────────────────────────────────────────────
+
+export async function getScans() {
+  const res = await fetch(`${BASE_URL}/api/scans/`, {
+    headers: authHeader(),
+  })
+  return handleResponse(res)
+}
+
+export async function getScan(scanId) {
+  const res = await fetch(`${BASE_URL}/api/scans/${scanId}`, {
+    headers: authHeader(),
+  })
+  return handleResponse(res)
+}
+
+// ─── Scan result shape for ResultsDetailPage ─────────────────────────────────
+
+function scanToResultShape(scan) {
+  return {
+    drGrade:     scan.grade,
+    confidence:  parseFloat((scan.confidence * 100).toFixed(1)),
+    patientName: scan.patient_name || 'Unknown Patient',
+    patientId:   'PT-' + String(scan.id).padStart(6, '0'),
+    scanDate:    scan.uploaded_at
+      ? new Date(scan.uploaded_at).toLocaleDateString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric',
+        })
+      : '—',
+    originalUrl: MOCK_SCAN_RESULT.originalUrl,
+    heatmapUrl:  scan.heatmap_path || MOCK_SCAN_RESULT.heatmapUrl,
+    lesionProbs: {
+      MA: Math.round((scan.lesions?.MA ?? scan.prob_ma ?? 0) * 100),
+      HE: Math.round((scan.lesions?.HE ?? scan.prob_he ?? 0) * 100),
+      EX: Math.round((scan.lesions?.EX ?? scan.prob_ex ?? 0) * 100),
+      SE: Math.round((scan.lesions?.SE ?? scan.prob_se ?? 0) * 100),
+    },
+    aiInsight: GRADE_DESCRIPTIONS[scan.grade] || '',
+  }
+}
+
+// ─── uploadScan / startAnalysis — wired to /api/predict ──────────────────────
+// NewScanPage calls uploadScan(file) then startAnalysis(scanId).
+// We run the full prediction in uploadScan and cache the result so
+// getScanResults can find it even though the page navigates to /scan/1/results.
+
+export async function uploadScan(file) {
+  const result = await predictScan(file, '', '')
+  localStorage.setItem('last_scan_id', String(result.scan_id))
+  return { scanId: result.scan_id, previewUrl: URL.createObjectURL(file) }
+}
+
+export async function startAnalysis(scanId) {
+  return { jobId: 'done', resultId: scanId }
+}
+
+// ─── getScanResults — wired to /api/scans/:id ────────────────────────────────
+// Falls back to the last uploaded scan if the URL-param scanId (which
+// NewScanPage hardcodes to 1) doesn't belong to the current user.
+
+export async function getScanResults(scanId) {
+  try {
+    const scan = await getScan(scanId)
+    return scanToResultShape(scan)
+  } catch (_) {
+    const lastId = localStorage.getItem('last_scan_id')
+    if (lastId && lastId !== String(scanId)) {
+      try {
+        const scan = await getScan(lastId)
+        return scanToResultShape(scan)
+      } catch (_) {}
+    }
+    return MOCK_SCAN_RESULT
+  }
+}
+
+// ─── getPatients — wired to /api/scans/ ─────────────────────────────────────
+// PatientHistoryPage calls getPatients({ search }) and expects the patient-list
+// shape. We fetch real scans and transform them.
+
+export async function getPatients({ search = '' } = {}) {
+  try {
+    const scans = await getScans()
+    const patients = scans
+      .filter((s) =>
+        !search ||
+        (s.patient_name || '').toLowerCase().includes(search.toLowerCase()),
+      )
+      .map((s) => ({
+        id:        s.id,
+        name:      s.patient_name || 'Unknown Patient',
+        patientId: 'PT-' + String(s.id).padStart(6, '0'),
+        scanDate:  s.uploaded_at
+          ? new Date(s.uploaded_at).toLocaleDateString('en-GB', {
+              day: '2-digit', month: 'short', year: 'numeric',
+            })
+          : '—',
+        drGrade:    s.grade,
+        confidence: parseFloat((s.confidence * 100).toFixed(1)),
+        previewUrl: MOCK_SCAN_RESULT.originalUrl,
+      }))
+    return { patients, total: patients.length }
+  } catch (_) {
+    const filtered = MOCK_PATIENTS.filter(
+      (p) =>
+        !search ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.patientId.toLowerCase().includes(search.toLowerCase()),
+    )
+    return { patients: filtered, total: 1284 }
+  }
+}
+
+// ─── Dashboard (mock — no backend endpoint) ───────────────────────────────────
+
 export async function getDashboard() {
-  await delay()
   return { stats: MOCK_STATS, activity: MOCK_ACTIVITY, clinician: MOCK_CLINICIAN }
 }
 
-// ─── Patients ────────────────────────────────────────────────────────────
+// ─── Settings (mock) ──────────────────────────────────────────────────────────
 
-/**
- * Patient list — GET /api/patients?page=1&search=&filter=
- * @returns {{ patients: array, total: number }}
- */
-export async function getPatients({ search = '', page = 1 } = {}) {
-  await delay()
-  const filtered = MOCK_PATIENTS.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.patientId.toLowerCase().includes(search.toLowerCase())
-  )
-  return { patients: filtered, total: 1284 }
-}
-
-// ─── Scans ───────────────────────────────────────────────────────────────
-
-/**
- * Upload scan image — POST /api/scan/upload (multipart/form-data)
- * @param {File} file
- * @returns {{ scanId: string, previewUrl: string }}
- */
-export async function uploadScan(file) {
-  await delay(1200)
-  // In production: upload file, get back a scan ID and preview URL
-  return { scanId: 'scan-mock-001', previewUrl: URL.createObjectURL(file) }
-}
-
-/**
- * Start analysis — POST /api/scan/:scanId/analyze
- * @returns {{ jobId: string }}
- */
-export async function startAnalysis(scanId) {
-  await delay(2000)
-  // In production: triggers the EfficientNet-B4 model inference
-  return { jobId: 'job-mock-001', resultId: 'result-mock-001' }
-}
-
-/**
- * Get scan results — GET /api/scan/:id/results
- * @returns scan result object with drGrade, lesionProbs, heatmapUrl, aiInsight
- */
-export async function getScanResults(scanId) {
-  await delay()
-  return MOCK_SCAN_RESULT
-}
-
-// ─── Settings ────────────────────────────────────────────────────────────
-
-/**
- * Save settings — PUT /api/settings
- * @returns {{ message: string }}
- */
 export async function saveSettings(settingsData) {
-  await delay(500)
   return { message: 'Settings saved successfully' }
 }

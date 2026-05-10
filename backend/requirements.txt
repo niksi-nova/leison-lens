@@ -1,0 +1,14 @@
+flask
+flask-cors
+flask-sqlalchemy
+flask-jwt-extended
+python-dotenv
+psycopg2-binary
+werkzeug
+torch
+torchvision
+timm
+albumentations
+opencv-python-headless
+numpy
+pillow
