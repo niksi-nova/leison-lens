@@ -26,30 +26,30 @@ import { getPatients } from '../api/index.js'
 
 // Quick insight cards at the bottom of the page
 const INSIGHTS = [
-  {
-    label: 'Critical Flagging',
-    value: '12',
-    badge: '+3 today',
-    badgeColor: 'bg-error-container text-error',
-    valueColor: 'text-error',
-    desc: 'Scans requiring immediate clinician review.',
-  },
-  {
-    label: 'Weekly Volume',
-    value: '342',
-    badge: 'Normal',
-    badgeColor: 'bg-primary-fixed text-primary',
-    valueColor: 'text-primary',
-    desc: 'Diagnostic retinal scans processed this week.',
-  },
-  {
-    label: 'AI Confidence',
-    value: '98.4%',
-    badge: 'Stable',
-    badgeColor: 'bg-tertiary-fixed text-tertiary',
-    valueColor: 'text-tertiary',
-    desc: 'Average verification score across all models.',
-  },
+  // {
+  //   label: 'Critical Flagging',
+  //   value: '12',
+  //   badge: '+3 today',
+  //   badgeColor: 'bg-error-container text-error',
+  //   valueColor: 'text-error',
+  //   desc: 'Scans requiring immediate clinician review.',
+  // },
+  // {
+  //   label: 'Weekly Volume',
+  //   value: '342',
+  //   badge: 'Normal',
+  //   badgeColor: 'bg-primary-fixed text-primary',
+  //   valueColor: 'text-primary',
+  //   desc: 'Diagnostic retinal scans processed this week.',
+  // },
+  // {
+  //   label: 'AI Confidence',
+  //   value: '98.4%',
+  //   badge: 'Stable',
+  //   badgeColor: 'bg-tertiary-fixed text-tertiary',
+  //   valueColor: 'text-tertiary',
+  //   desc: 'Average verification score across all models.',
+  // },
 ]
 
 export default function PatientHistoryPage() {
@@ -80,8 +80,7 @@ export default function PatientHistoryPage() {
         <div>
           <h1 className="text-h1 font-bold text-on-surface">Patient History</h1>
           <p className="text-on-surface-variant mt-1 max-w-lg">
-            Comprehensive registry of diagnostic retinal scans and longitudinal retinopathy
-            progression data.
+            Registry of diagnostic retinal scans
           </p>
         </div>
 
@@ -94,7 +93,7 @@ export default function PatientHistoryPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search patient or ID…"
+              placeholder="Search patient name…"
               className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-outline/60 text-on-surface"
             />
             {search && (

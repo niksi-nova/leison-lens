@@ -107,14 +107,14 @@ export default function SideNav({ activePage }) {
         </button>
 
         {/* Emergency support — uses secondary (terracotta) color */}
-        <Button
+        {/* <Button
           variant="danger"
           size="sm"
           className="w-full rounded-xl justify-center text-xs uppercase tracking-widest"
           onClick={() => alert('Emergency support contact: +1 800 555 0199')}
         >
           Emergency Support
-        </Button>
+        </Button> */}
       </div>
     </aside>
   )

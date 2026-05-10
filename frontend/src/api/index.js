@@ -128,7 +128,12 @@ function scanToResultShape(scan) {
 export async function uploadScan(file) {
   const result = await predictScan(file, '', '')
   localStorage.setItem('last_scan_id', String(result.scan_id))
-  return { scanId: result.scan_id, previewUrl: URL.createObjectURL(file) }
+  return {
+    scanId:      result.scan_id,
+    previewUrl:  URL.createObjectURL(file),
+    confidence:  result.confidence,   // 0–1 float
+    grade_label: result.grade_label,  // e.g. "No DR"
+  }
 }
 
 export async function startAnalysis(scanId) {

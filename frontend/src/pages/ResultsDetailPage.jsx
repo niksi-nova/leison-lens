@@ -84,34 +84,13 @@ export default function ResultsDetailPage() {
             <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
               Patient Name
             </p>
-            <h2 className="font-semibold text-primary">{result.patientName}</h2>
+            {/*<h2 className="font-semibold text-primary">{result.patientName}</h2>*/}
           </div>
           {/* Vertical divider */}
-          <div className="hidden sm:block w-px h-10 bg-white/40" />
-          <div>
-            <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-              ID Number
-            </p>
-            <p className="font-mono text-sm text-on-surface">{result.patientId}</p>
-          </div>
-          <div className="hidden sm:block w-px h-10 bg-white/40" />
-          <div>
-            <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-              Last Scan
-            </p>
-            <p className="font-mono text-sm text-on-surface">{result.scanDate}</p>
-          </div>
+          
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-3 flex-shrink-0">
-          <Button variant="secondary" size="sm">
-            Export PDF
-          </Button>
-          <Button variant="primary" size="sm">
-            Finalize Diagnosis
-          </Button>
-        </div>
+        
       </GlassCard>
 
       {/* ─── 2. Side-by-side scan images ──────────────────────────────── */}
@@ -240,14 +219,14 @@ export default function ResultsDetailPage() {
             <Icon name="neurology" className="text-primary text-2xl" />
           </div>
 
-          <h3 className="text-lg font-bold text-primary mb-4">AI Diagnostic Insight</h3>
+          <h3 className="text-lg font-bold text-primary mb-4">Diagnostic Insight</h3>
 
           <p className="text-sm text-on-surface-variant leading-relaxed flex-1">
             {result.aiInsight}
           </p>
 
           {/* Link to full report */}
-          <div className="mt-6 pt-6 border-t border-primary/10">
+          {/* <div className="mt-6 pt-6 border-t border-primary/10">
             <a
               href="#"
               className="font-mono text-xs font-bold text-primary flex items-center gap-2 group uppercase tracking-widest"
@@ -258,7 +237,7 @@ export default function ResultsDetailPage() {
                 className="text-sm group-hover:translate-x-1 transition-transform"
               />
             </a>
-          </div>
+          </div> */}
         </GlassCard>
       </div>
     </PortalLayout>

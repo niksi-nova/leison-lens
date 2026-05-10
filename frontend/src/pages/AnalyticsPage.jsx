@@ -58,11 +58,11 @@ export default function AnalyticsPage() {
           <Icon name="bar_chart" className="text-primary text-3xl" />
         </div>
         <h2 className="font-semibold text-on-surface text-xl mb-3">
-          Detailed Charts — Phase 7
+          Detailed Charts & Heatmaps
         </h2>
         <p className="text-on-surface-variant text-sm max-w-md leading-relaxed">
           Full time-series charts, grade distribution breakdowns, and lesion frequency
-          heatmaps will be added in Phase 7 once the backend is live.
+          heatmaps will be added.
         </p>
       </GlassCard>
     </PortalLayout>

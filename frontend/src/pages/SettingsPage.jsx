@@ -129,7 +129,8 @@ export default function SettingsPage() {
       <header className="mb-10">
         <h1 className="text-h1 font-bold text-on-surface">Settings</h1>
         <p className="text-on-surface-variant mt-1">
-          Manage your clinician profile, notification preferences, and data-privacy controls.
+          Manage your clinician profile 
+           {/* notification preferences, and data-privacy controls. */}
         </p>
       </header>
 
@@ -153,7 +154,7 @@ export default function SettingsPage() {
                 </span>
               </div>
               <button className="font-mono text-[10px] text-primary uppercase tracking-widest hover:underline">
-                Change Photo
+                {/* Change Photo */}
               </button>
             </div>
 
@@ -207,18 +208,18 @@ export default function SettingsPage() {
         </GlassCard>
 
         {/* ─── 2. Notifications ───────────────────────────────────────────── */}
-        <GlassCard className="rounded-3xl p-6 md:p-8">
+        {/* <GlassCard className="rounded-3xl p-6 md:p-8"> */}
           {/* Section heading */}
-          <div className="flex items-center gap-3 mb-8">
+          {/* <div className="flex items-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-xl bg-secondary-container/20 flex items-center justify-center">
               <Icon name="notifications" className="text-secondary text-xl" />
             </div>
             <h2 className="font-semibold text-on-surface text-lg">Notifications</h2>
-          </div>
+          </div> */}
 
-          <div className="space-y-6">
+          {/* <div className="space-y-6"> */}
             {/* Critical Findings */}
-            <div className="flex items-center justify-between gap-4 py-3 border-b border-white/20">
+            {/* <div className="flex items-center justify-between gap-4 py-3 border-b border-white/20">
               <div>
                 <p className="font-semibold text-on-surface text-sm">Critical Findings Alert</p>
                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -229,10 +230,10 @@ export default function SettingsPage() {
                 checked={notifications.criticalFindings}
                 onChange={() => toggleNotification('criticalFindings')}
               />
-            </div>
+            </div> */}
 
             {/* Weekly Analytics */}
-            <div className="flex items-center justify-between gap-4 py-3 border-b border-white/20">
+            {/* <div className="flex items-center justify-between gap-4 py-3 border-b border-white/20">
               <div>
                 <p className="font-semibold text-on-surface text-sm">Weekly Analytics Report</p>
                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -243,10 +244,10 @@ export default function SettingsPage() {
                 checked={notifications.weeklyAnalytics}
                 onChange={() => toggleNotification('weeklyAnalytics')}
               />
-            </div>
+            </div> */}
 
             {/* Security Audit Logs */}
-            <div className="flex items-center justify-between gap-4 py-3">
+            {/* <div className="flex items-center justify-between gap-4 py-3">
               <div>
                 <p className="font-semibold text-on-surface text-sm">Security Audit Log Digest</p>
                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -259,21 +260,21 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-        </GlassCard>
+        </GlassCard> */}
 
         {/* ─── 3. Institution Details ─────────────────────────────────────── */}
-        <GlassCard className="rounded-3xl p-6 md:p-8">
+        {/* <GlassCard className="rounded-3xl p-6 md:p-8"> */}
           {/* Section heading */}
-          <div className="flex items-center gap-3 mb-8">
+          {/* <div className="flex items-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-xl bg-tertiary-container/20 flex items-center justify-center">
               <Icon name="local_hospital" className="text-tertiary text-xl" />
             </div>
             <h2 className="font-semibold text-on-surface text-lg">Institution Details</h2>
-          </div>
+          </div> */}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"> */}
             {/* Hospital name */}
-            <div>
+            {/* <div>
               <label className={fieldLabel}>Hospital / Clinic Name</label>
               <input
                 type="text"
@@ -281,10 +282,10 @@ export default function SettingsPage() {
                 onChange={(e) => updateInstitution('hospital', e.target.value)}
                 className={fieldInput}
               />
-            </div>
+            </div> */}
 
             {/* Department */}
-            <div>
+            {/* <div>
               <label className={fieldLabel}>Department</label>
               <input
                 type="text"
@@ -292,10 +293,10 @@ export default function SettingsPage() {
                 onChange={(e) => updateInstitution('department', e.target.value)}
                 className={fieldInput}
               />
-            </div>
+            </div> */}
 
             {/* Timezone */}
-            <div>
+            {/* <div>
               <label className={fieldLabel}>Timezone</label>
               <select
                 value={institution.timezone}
@@ -308,21 +309,21 @@ export default function SettingsPage() {
               </select>
             </div>
           </div>
-        </GlassCard>
+        </GlassCard> */}
 
         {/* ─── 4. HIPAA & Privacy ─────────────────────────────────────────── */}
-        <GlassCard className="rounded-3xl p-6 md:p-8">
+        {/* <GlassCard className="rounded-3xl p-6 md:p-8"> */}
           {/* Section heading */}
-          <div className="flex items-center gap-3 mb-8">
+          {/* <div className="flex items-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-xl bg-error-container/20 flex items-center justify-center">
               <Icon name="security" className="text-error text-xl" />
             </div>
             <h2 className="font-semibold text-on-surface text-lg">HIPAA &amp; Privacy</h2>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6"> */}
             {/* Encryption status */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white/20 rounded-2xl border border-white/30">
+            {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white/20 rounded-2xl border border-white/30">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center">
                   <Icon name="lock" className="text-primary text-base" />
@@ -331,26 +332,26 @@ export default function SettingsPage() {
                   <p className="font-semibold text-on-surface text-sm">Data Encryption</p>
                   <p className="text-xs text-on-surface-variant">AES-256 at rest · TLS 1.3 in transit</p>
                 </div>
-              </div>
+              </div> */}
               {/* Active badge */}
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-container/20 text-primary rounded-full text-xs font-bold self-start sm:self-auto">
+              {/* <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-container/20 text-primary rounded-full text-xs font-bold self-start sm:self-auto">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Active
               </span>
-            </div>
+            </div> */}
 
             {/* Key rotation + access log */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="secondary" size="sm" icon="refresh" className="flex-1 justify-center">
                 Rotate Encryption Keys
               </Button>
               <Button variant="ghost" size="sm" icon="description" className="flex-1 justify-center">
                 Download Access Log
               </Button>
-            </div>
+            </div> */}
 
             {/* 2FA toggle */}
-            <div className="flex items-center justify-between gap-4 py-3 border-t border-white/20 mt-2">
+            {/* <div className="flex items-center justify-between gap-4 py-3 border-t border-white/20 mt-2">
               <div>
                 <p className="font-semibold text-on-surface text-sm">Two-Factor Authentication</p>
                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -363,7 +364,7 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-        </GlassCard>
+        </GlassCard> */}
 
         {/* ─── Action Footer ──────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">

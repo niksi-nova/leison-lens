@@ -39,18 +39,18 @@ const DEFAULT_EYE_IMG = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCqG
 const FEATURES = [
   {
     icon: 'auto_awesome',
-    title: 'AI Enhancement',
-    desc: 'Automatic contrast adjustment and noise reduction for clearer vessel mapping.',
+    title: 'Ben Graham Preprocessing',
+    desc: 'Illumination bias removal via Gaussian subtraction and CLAHE contrast enhancement on the green channel — standard in DR literature since 2015.',
   },
   {
     icon: 'security',
-    title: 'HIPAA Compliant',
-    desc: 'All data is anonymized before cloud-syncing to ensure patient confidentiality.',
+    title: 'Class Based Inference',
+    desc: 'Trained with Weighted Random Sampling across five DR severity grades on APTOS 2019 — 5,993 labelled fundus photographs',
   },
   {
     icon: 'clinical_notes',
-    title: 'Auto-Reporting',
-    desc: 'Generated PDF findings will be sent directly to your clinician portal upon completion.',
+    title: 'Multi-Task Architecture',
+    desc: 'Simultaneously grades DR severity (0–4) and detects four lesion types: microaneurysms, haemorrhages, hard and soft exudates.',
   },
 ]
 
@@ -64,6 +64,7 @@ export default function NewScanPage() {
 
   const [analysisState, setAnalysisState] = useState(STATE.IDLE)
   const [scanError, setScanError]         = useState(null)
+  const [prediction, setPrediction]       = useState(null)
 
   // The displayed eye image — user's upload preview or default
   const eyeImage = previewUrl ?? DEFAULT_EYE_IMG
@@ -77,7 +78,8 @@ export default function NewScanPage() {
 
     try {
       setAnalysisState(STATE.UPLOADING)
-      const { scanId } = await uploadScan(file)
+      const { scanId, confidence, grade_label } = await uploadScan(file)
+      setPrediction({ confidence, grade_label })
 
       setAnalysisState(STATE.ANALYZING)
       const { resultId } = await startAnalysis(scanId)
@@ -95,6 +97,7 @@ export default function NewScanPage() {
     clearFile()
     setAnalysisState(STATE.IDLE)
     setScanError(null)
+    setPrediction(null)
   }
 
   // Label shown inside the START ANALYSIS button based on current state
@@ -114,13 +117,13 @@ export default function NewScanPage() {
         <div>
           <h1 className="text-h1 font-bold text-on-surface">Analyse Retina</h1>
           <p className="text-on-surface-variant mt-1">
-            Upload high-resolution fundus imagery for AI diagnostic assessment.
+            Upload high-resolution fundus imagery for diagnostic assessment.
           </p>
         </div>
-        <div className="text-right">
+        {/* <div className="text-right">
           <p className="font-mono text-[10px] text-outline uppercase tracking-widest">Station ID</p>
           <p className="font-mono text-sm text-primary font-bold">LL-XC-9021</p>
-        </div>
+        </div> */}
       </header>
 
       {/* ─── Main Upload + Viewer Panel ───────────────────────────────── */}
@@ -169,7 +172,7 @@ export default function NewScanPage() {
               <p className="text-on-surface-variant text-sm text-center px-4">
                 {previewUrl
                   ? `${(file?.size / (1024 * 1024)).toFixed(1)} MB — ready for analysis`
-                  : 'Or click to browse files from your local clinical database. Supports TIFF, JPG, DICOM.'}
+                  : 'Supports JPG, PNG. Recommended: high-resolution fundus photograph, minimum 512×512px.'}
               </p>
 
               {/* Indicator dots */}
@@ -186,7 +189,7 @@ export default function NewScanPage() {
             )}
 
             {/* Metadata pills: latency + encryption */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-2 gap-4">
               {[
                 { label: 'Latency',    value: '14ms Global Hook' },
                 { label: 'Encryption', value: 'AES-256 Protocol' },
@@ -198,7 +201,7 @@ export default function NewScanPage() {
                   <span className="font-mono text-sm text-on-surface">{meta.value}</span>
                 </div>
               ))}
-            </div>
+            </div> */}
           </div>
 
           {/* ── Right: Scan Viewer ────────────────────────────────────── */}
@@ -227,20 +230,24 @@ export default function NewScanPage() {
               {/* AI Confidence badge — top right */}
               <div className="absolute top-0 -right-4 md:-right-10 glass bg-white/80 px-3 py-2 rounded-xl border border-white/60 shadow-sm">
                 <span className="font-mono text-[9px] font-bold text-primary block uppercase">AI Confidence</span>
-                <span className="font-mono text-sm text-on-surface font-bold">98.4%</span>
+                <span className="font-mono text-sm text-on-surface font-bold">
+                  {prediction ? `${(prediction.confidence * 100).toFixed(1)}%` : '-- %'}
+                </span>
               </div>
 
-              {/* Macula badge — bottom left */}
+              {/* Grade badge — bottom left */}
               <div className="absolute bottom-8 -left-4 md:-left-12 glass bg-white/80 px-3 py-2 rounded-xl border border-white/60 shadow-sm">
-                <span className="font-mono text-[9px] font-bold text-secondary block uppercase">Macula</span>
-                <span className="font-mono text-sm text-on-surface font-bold">Optimal</span>
+                <span className="font-mono text-[9px] font-bold text-secondary block uppercase">Grade</span>
+                <span className="font-mono text-sm text-on-surface font-bold">
+                  {prediction ? prediction.grade_label : 'Pending'}
+                </span>
               </div>
             </div>
 
             {/* Processing status + action buttons */}
             <div className="text-center">
               <span className="font-mono text-[10px] text-outline block mb-4 uppercase tracking-[0.2em]">
-                Processing Engine Active
+                LESION-LENS v1.0 — EFFICIENTNET-B4
               </span>
 
               {scanError && (
