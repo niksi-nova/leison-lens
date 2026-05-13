@@ -76,7 +76,7 @@ _model = None
 def init_model(checkpoint_path: str):
     global _model
     _model = DRMultiTaskModel().to(DEVICE)
-    checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
+    checkpoint = torch.load(checkpoint_path, map_location=DEVICE, weights_only=False)
     if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
         _model.load_state_dict(checkpoint['model_state_dict'])
     elif isinstance(checkpoint, dict):
