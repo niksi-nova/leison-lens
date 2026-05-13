@@ -3,6 +3,31 @@
 > **Status:** Phase 3 complete (Training + Ablation) · Phase 4 in progress (Grad-CAM) · Phase 6 complete (Flask + React deployment)
 > **Target venue:** IEEE Journal of Biomedical and Health Informatics (JBHI) or equivalent
 
+## Quick Start
+
+```bash
+# 1. Python backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r backend/requirements.txt
+
+# 2. Frontend
+cd frontend && npm install && cd ..
+
+# 3. Environment
+cp .env.example .env   # Fill in your Supabase credentials + secrets
+
+# 4. Model checkpoint
+# Download from Kaggle and place at: checkpoints/best_model_lambda0.4.pth
+
+# 5. Run everything
+./run.sh
+```
+
+> The frontend is at **http://localhost:5173**, backend at **http://localhost:5000**.
+> Press **Ctrl+C** to stop both servers simultaneously.
+> A demo account is coming soon — for now, sign up at `/signup` after starting the servers.
+
 ---
 
 ## Table of Contents
@@ -126,7 +151,7 @@ el4/
 │   │   │   │                    # NewScanPage, ResultsDetailPage,
 │   │   │   │                    # PatientHistoryPage, AnalyticsPage, SettingsPage
 │   │   ├── components/          # GlassCard, Button, SeverityBadge, layout
-│   │   ├── data/
+│   │   ├── mock/
 │   │   │   ├── mockDashboard.js # Dashboard mock (no backend endpoint yet)
 │   │   │   └── mockPatients.js  # Fallback patient data + DR_GRADE_LABELS constant
 │   │   └── hooks/
@@ -164,6 +189,7 @@ el4/
 │
 ├── .env                         # SECRET_KEY, JWT_SECRET_KEY, DATABASE_URL, CHECKPOINT_PATH
 ├── requirements.txt             # ML training dependencies
+├── run.sh                       # Start both backend + frontend (Ctrl+C to stop)
 └── README.md
 ```
 
