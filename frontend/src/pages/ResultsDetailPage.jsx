@@ -28,7 +28,7 @@ import GlassCard from '../components/ui/GlassCard.jsx'
 import Icon from '../components/ui/Icon.jsx'
 import Button from '../components/ui/Button.jsx'
 import { getScanResults } from '../api/index.js'
-import { DR_GRADE_LABELS } from '../data/mockPatients.js'
+import { DR_GRADE_LABELS } from '../mock/mockPatients.js'
 
 // DR severity scale steps — matches APTOS 2019 grade labels
 const DR_STEPS = [

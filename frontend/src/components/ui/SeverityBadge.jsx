@@ -9,7 +9,7 @@
  *   <SeverityBadge grade={3} />   → "SEVERE" with error-red bar
  */
 
-import { SEVERITY_BADGE } from '../../data/mockPatients.js'
+import { SEVERITY_BADGE } from '../../mock/mockPatients.js'
 
 export default function SeverityBadge({ grade }) {
   const config = SEVERITY_BADGE[grade] ?? SEVERITY_BADGE[0]

@@ -21,7 +21,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon.jsx'
 import Button from '../ui/Button.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { MOCK_CLINICIAN } from '../../data/mockDashboard.js'
+import { MOCK_CLINICIAN } from '../../mock/mockDashboard.js'
 
 // Each nav item: icon, label, and the route it links to
 const NAV_ITEMS = [

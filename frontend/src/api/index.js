@@ -1,5 +1,5 @@
-import { MOCK_PATIENTS, MOCK_SCAN_RESULT } from '../data/mockPatients.js'
-import { MOCK_STATS, MOCK_ACTIVITY, MOCK_CLINICIAN } from '../data/mockDashboard.js'
+import { MOCK_PATIENTS, MOCK_SCAN_RESULT } from '../mock/mockPatients.js'
+import { MOCK_STATS, MOCK_ACTIVITY, MOCK_CLINICIAN } from '../mock/mockDashboard.js'
 
 const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
